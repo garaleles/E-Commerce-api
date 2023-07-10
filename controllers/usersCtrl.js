@@ -1,7 +1,6 @@
 import User from '../models/User.js';
 import jwt from 'jsonwebtoken';
 import asyncHandler from 'express-async-handler';
-import generateToken from '../helpers/generateToken.js';
 import validator from 'email-validator';
 import sgMail from '@sendgrid/mail';
 import { nanoid } from 'nanoid';
@@ -12,7 +11,7 @@ const tokenAndUserResponse = (req, res, user) => {
     expiresIn: process.env.JWT_EXPIRES_IN,
   });
   const refreshToken = jwt.sign({ _id: user._id }, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRES_IN,
+    expiresIn: process.env.JWT_REFRESH_EXPIRES_IN,
   });
 
   user.password = undefined;
@@ -71,7 +70,7 @@ export const preRegisterUserCtrl = asyncHandler(async (req, res) => {
     })
     .catch((error) => {
       console.error(error);
-      res.status(500).send('E-Posta gönderilemedi.');
+      throw new Error('Bir hata oluştu. Lütfen tekrar deneyiniz.');
     });
 });
 
@@ -85,7 +84,7 @@ export const registerUserCtrl = asyncHandler(async (req, res) => {
     const userExist = await User.findOne({ email });
 
     if (userExist) {
-      return res.json({
+      return res.status(400).json({
         error: 'Bu e-posta adresi ile daha önce kayıt olunmuş.',
       });
     }
@@ -103,9 +102,7 @@ export const registerUserCtrl = asyncHandler(async (req, res) => {
     tokenAndUserResponse(req, res, user);
   } catch (error) {
     console.log(error);
-    return res.json({
-      error: 'Bilinmeyen bir hata oluştu. Daha sonra tekrar deneyiniz.',
-    });
+    throw new Error('message');
   }
 });
 
@@ -114,19 +111,25 @@ export const loginUserCtrl = asyncHandler(async (req, res) => {
     const { email, password } = req.body;
 
     const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(400).json({
+        error: 'E-posta adresiniz veya şifreniz hatalı.',
+      });
+    }
+
     const match = await comparePassword(password, user.password);
 
     if (!match) {
-      return res.json({
-        error: 'E-posta adresi veya şifre hatalı.',
+      return res.status(400).json({
+        error: 'E-posta adresiniz veya şifreniz hatalı.',
       });
     }
+
     tokenAndUserResponse(req, res, user);
   } catch (error) {
     console.log(error);
-    return res.json({
-      error: 'Bilinmeyen bir hata oluştu. Daha sonra tekrar deneyiniz.',
-    });
+    throw new Error(message);
   }
 });
 
@@ -136,7 +139,9 @@ export const forgotPasswordCtrl = asyncHandler(async (req, res) => {
 
     const user = await User.findOne({ email });
     if (!user) {
-      return res.json({ error: 'Bu e-postaya ait kullanıcı bulunamadı.' });
+      return res
+        .status(400)
+        .json({ error: 'Bu e-postaya ait kullanıcı bulunamadı.' });
     } else {
       const resetCode = nanoid();
       user.resetCode = resetCode;
@@ -171,9 +176,7 @@ export const forgotPasswordCtrl = asyncHandler(async (req, res) => {
     }
   } catch (error) {
     console.log(error);
-    return res.json({
-      error: 'Bilinmeyen bir hata oluştu. Daha sonra tekrar deneyiniz.',
-    });
+    throw new Error('Bilinmeyen bir hata oluştu. Daha sonra tekrar deneyiniz.');
   }
 });
 
@@ -189,9 +192,7 @@ export const accessAccountCtrl = asyncHandler(async (req, res) => {
     tokenAndUserResponse(req, res, user);
   } catch (error) {
     console.log(error);
-    return res.json({
-      error: 'Bilinmeyen bir hata oluştu. Daha sonra tekrar deneyiniz.',
-    });
+    throw new Error(message);
   }
 });
 
@@ -227,25 +228,27 @@ export const currentUserCtrl = asyncHandler(async (req, res) => {
 });
 
 export const publicProfileCtrl = asyncHandler(async (req, res) => {
- try {
-   const user = await User.findOne({ userName: req.params.userName });
-   user.password = undefined;
-   user.resetCode = undefined;
-   res.json(user);
- } catch (err) {
-   console.log(err);
-   return res.json({ error: 'Kullanıcı bulunamadı' });
- }
+  try {
+    const user = await User.findOne({ userName: req.params.userName });
+    user.password = undefined;
+    user.resetCode = undefined;
+    res.json(user);
+  } catch (err) {
+    console.log(err);
+    return res.status(400).json({ error: 'Kullanıcı bulunamadı' });
+  }
 });
-export const updatePasswordCtrl = async (req, res) => {
+export const updatePasswordCtrl = asyncHandler(async (req, res) => {
   try {
     const { password } = req.body;
 
     if (!password) {
-      return res.json({ error: 'Şifre alanı boş bırakılamaz.' });
+      return res.status(400).json({ error: 'Şifre alanı boş bırakılamaz.' });
     }
     if (password && password.length < 6) {
-      return res.json({ error: 'Şifre en az 6 karakter olmalıdır.' });
+      return res
+        .status(400)
+        .json({ error: 'Şifre en az 6 karakter olmalıdır.' });
     }
 
     const user = await User.findByIdAndUpdate(req.user._id);
@@ -259,28 +262,65 @@ export const updatePasswordCtrl = async (req, res) => {
       error: 'Yetkisiz erişim.',
     });
   }
-};
+});
 
-export const updateProfileCtrl = async (req, res) => { 
-   try {
-     const user = await User.findByIdAndUpdate(req.user._id, req.body, {
-       new: true,
-     });
-     user.password = undefined;
-     user.resetCode = undefined;
-     res.json({ ok: true, data: user });
-   } catch (error) {
-     console.log(error);
+export const updateProfileCtrl = asyncHandler(async (req, res) => {
+  try {
+    const user = await User.findByIdAndUpdate(req.user._id, req.body, {
+      new: true,
+    });
+    user.password = undefined;
+    user.resetCode = undefined;
+    res.json({ ok: true, data: user });
+  } catch (error) {
+    console.log(error);
 
-     if (error.codeName === 'DuplicateKey') {
-       return res.json({
-         error: 'Bu kullanıcı adı veya e-posta ile daha önce kayıt olunmuş.',
-       });
-     } else {
-       return res.status(403).json({
-         error: 'Yetkisiz erişim.',
-       });
-     }
-   }
-};
+    if (error.codeName === 'DuplicateKey') {
+      return res.status(400).json({
+        error: 'Bu kullanıcı adı veya e-posta ile daha önce kayıt olunmuş.',
+      });
+    } else {
+      return res.status(403).json({
+        error: 'Yetkisiz erişim.',
+      });
+    }
+  }
+});
 
+export const updateShippingAddresctrl = asyncHandler(async (req, res) => {
+  const {
+    firstName,
+    lastName,
+    address,
+    city,
+    postalCode,
+    province,
+    phone,
+    country,
+  } = req.body;
+  const user = await User.findByIdAndUpdate(
+    req.userAuthId,
+    {
+      shippingAddress: {
+        firstName,
+        lastName,
+        address,
+        city,
+        postalCode,
+        province,
+        phone,
+        country,
+      },
+      hasShippingAddress: true,
+    },
+    {
+      new: true,
+    }
+  );
+  //send response
+  res.json({
+    status: 'success',
+    message: 'Kullanıcı teslimat adresi güncellendi.',
+    user,
+  });
+});

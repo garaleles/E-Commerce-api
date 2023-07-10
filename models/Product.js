@@ -1,6 +1,8 @@
 import mongoose from 'mongoose';
+const Schema = mongoose.Schema;
 
-const productSchema = new mongoose.Schema(
+
+const productSchema = new Schema(
   {
     name: {
       type: String,
@@ -25,12 +27,12 @@ const productSchema = new mongoose.Schema(
       },
     ],
     category: {
-      type: mongoose.types.ObjectId,
+      type: mongoose.Schema.Types.ObjectId,
       ref: 'Category',
       required: [true, 'Lütfen bir kategori seçiniz.'],
     },
     brand: {
-      type: mongoose.types.ObjectId,
+      type: mongoose.Schema.Types.ObjectId,
       ref: 'Brand',
       required: [true, 'Lütfen bir marka seçiniz.'],
     },
@@ -42,7 +44,7 @@ const productSchema = new mongoose.Schema(
     sizes: {
       type: [String],
       enum: ['S', 'M', 'L', 'XL', 'XXL'],
-      required: true,
+      required: false,
     },
     freeShipping: {
       type: Boolean,
@@ -64,7 +66,7 @@ const productSchema = new mongoose.Schema(
       default: 0,
     },
     user: {
-      type: mongoose.Types.ObjectId,
+      type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
       required: true,
     },
@@ -72,15 +74,16 @@ const productSchema = new mongoose.Schema(
   { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
 
-ProductSchema.virtual('reviews', {
-  ref: 'Review',
-  localField: '_id',
-  foreignField: 'product',
-  justOne: false,
-});
+//ProductSchema.virtual('reviews', {
+  //ref: 'Review',
+  //localField: '_id',
+  //foreignField: 'product',
+ // justOne: false,
+//});
 
-ProductSchema.pre('remove', async function (next) {
-  await this.model('Review').deleteMany({ product: this._id });
-});
+//ProductSchema.pre('remove', async function (next) {
+ // await this.model('Review').deleteMany({ product: this._id });
+//});
 
 export default mongoose.model('Product', productSchema);
+

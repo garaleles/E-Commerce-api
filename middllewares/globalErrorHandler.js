@@ -1,7 +1,7 @@
 export const globalErrorHandler = (err, req, res, next) => {
   const stack = err?.stack;
   const statusCode = err?.statusCode ? err?.statusCode : 500;
-  const message = err?.message ? err?.message : 'Bir hata oluştu';
+  const message = err?.message ? err?.message : 'Bir hata oluştu. Lütfen tekrar deneyiniz';
 
   res.status(statusCode).json({
     success: false,

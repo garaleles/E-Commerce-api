@@ -14,4 +14,5 @@ router.get('/current-user', requireSignIn, user.currentUserCtrl);
 router.get('/profile/:userName', user.publicProfileCtrl);
 router.put('/update-password', requireSignIn, user.updatePasswordCtrl);
 router.put('/update-profile', requireSignIn, user.updateProfileCtrl);
+router.put('/update/shipping', requireSignIn, user.updateShippingAddresctrl);
 export default router;
