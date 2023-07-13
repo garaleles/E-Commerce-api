@@ -1,13 +1,11 @@
 import mongoose from 'mongoose';
+const Schema = mongoose.Schema;
 
-const categorySchema = new mongoose.Schema(
+const CategorySchema = new Schema(
   {
     name: {
       type: String,
       required: true,
-      unique: true,
-      trim: true,
-      maxlength: [100, 'Kategori adı 100 karakterden fazla olamaz.'],
     },
     user: {
       type: mongoose.Schema.Types.ObjectId,
@@ -16,6 +14,7 @@ const categorySchema = new mongoose.Schema(
     },
     image: {
       type: String,
+      default: 'https://picsum.photos/200/300',
       required: true,
     },
     products: [
@@ -25,11 +24,9 @@ const categorySchema = new mongoose.Schema(
       },
     ],
   },
-
   { timestamps: true }
 );
 
-const Category = mongoose.model('Category', categorySchema);
+const Category = mongoose.model('Category', CategorySchema);
 
 export default Category;
-

@@ -3,6 +3,11 @@ import connectDb from '../db/connectDb.js';
 import dotenv from 'dotenv';
 import userRoute from '../routes/usersRoute.js';
 import productRoute from '../routes/productsRoute.js';
+import categoriesRoute from '../routes/categoriesRoute.js';
+import brandsRoute from '../routes/brandsRoute.js';
+import colorsRoute from '../routes/colorsRoute.js';
+import reviewsRoute from '../routes/reviewsRoute.js';
+import ordersRoute from '../routes/ordersRoute.js';
 import cors from 'cors';
 import {
   globalErrorHandler,
@@ -31,6 +36,11 @@ app.use(express.json());
 // Routes
 app.use('/api/v1/users', userRoute);
 app.use('/api/v1/products', productRoute);
+app.use('/api/v1/categories', categoriesRoute);
+app.use('/api/v1/brands', brandsRoute);
+app.use('/api/v1/colors', colorsRoute);
+app.use('/api/v1/reviews', reviewsRoute);
+app.use('/api/v1/orders', ordersRoute);
 
 // Connect to MongoDB
 connectDb();

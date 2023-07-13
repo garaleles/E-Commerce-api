@@ -1,5 +1,7 @@
 import Product from '../models/product.js';
 import asyncHandler from 'express-async-handler';
+import Brand from '../models/Brand.js';
+import Category from '../models/Category.js';
 
 export const createProductCtrl = asyncHandler(async (req, res) => {
   const {
@@ -21,6 +23,25 @@ export const createProductCtrl = asyncHandler(async (req, res) => {
     res.status(400);
     throw new Error('Bu ürün zaten kayıtlı');
   }
+
+  //find category
+  const categoryFound = await Category.findOne({
+    name: category.toLowerCase(),
+  });
+  if (!categoryFound) {
+    res.status(400);
+    throw new Error('Kategori bulunamadı.');
+  }
+
+  //find brand
+  const brandFound = await Brand.findOne({
+    name: brand.toLowerCase(),
+  });
+  if (!brandFound) {
+    res.status(400);
+    throw new Error('Marka bulunamadı.');
+  }
+
   const product = await Product.create({
     name,
     description,
@@ -35,6 +56,13 @@ export const createProductCtrl = asyncHandler(async (req, res) => {
   });
 
   //push the product into category
+  categoryFound.products.push(product._id);
+  await categoryFound.save();
+
+  //push the product into brand
+  brandFound.products.push(product._id);
+  await brandFound.save();
+
   if (product) {
     res.status(201).json({
       status: 'success',
@@ -47,10 +75,18 @@ export const createProductCtrl = asyncHandler(async (req, res) => {
   }
 });
 
+export const getProductsAllCtrl = asyncHandler(async (req, res) => {
+  const products = await Product.find();
+  res.json({
+    status: 'success',
+    message: 'Ürünler başarıyla listelendi.',
+    products,
+  });
+});
+
 export const getProductsCtrl = asyncHandler(async (req, res) => {
-  console.log(req.query);
   //query
-  let productQuery = Product.find();
+  let productQuery = await Product.find();
 
   //search by name
   if (req.query.name) {
@@ -136,3 +172,70 @@ export const getProductsCtrl = asyncHandler(async (req, res) => {
   });
 });
 
+export const getProductCtrl = asyncHandler(async (req, res) => {
+  const product = await Product.findById(req.params.id).populate('reviews');
+  if (product) {
+    res.json({
+      status: 'success',
+      message: 'Ürün başarıyla listelendi.',
+      product,
+    });
+  } else {
+    res.status(404);
+    throw new Error('Ürün bulunamadı.');
+  }
+});
+
+export const updateProductCtrl = asyncHandler(async (req, res) => {
+  const {
+    name,
+    description,
+    price,
+    category,
+    colors,
+    sizes,
+    reviews,
+    totalQty,
+    brand,
+    user,
+  } = req.body;
+
+  const product = await Product.findById(req.params.id);
+
+  if (product) {
+    product.name = name;
+    product.description = description;
+    product.price = price;
+    product.category = category;
+    product.colors = colors;
+    product.sizes = sizes;
+    product.reviews = reviews;
+    product.totalQty = totalQty;
+    product.brand = brand;
+    product.user = user;
+
+    const updatedProduct = await product.save();
+    res.json({
+      status: 'success',
+      message: 'Ürün başarıyla güncellendi.',
+      data: updatedProduct,
+    });
+  } else {
+    res.status(404);
+    throw new Error('Ürün bulunamadı.');
+  }
+});
+
+export const deleteProductCtrl = asyncHandler(async (req, res) => {
+  const product = await Product.findById(req.params.id);
+  if (product) {
+    await product.deleteOne();
+    res.json({
+      status: 'success',
+      message: 'Ürün başarıyla silindi.',
+    });
+  } else {
+    res.status(404);
+    throw new Error('Ürün bulunamadı.');
+  }
+});

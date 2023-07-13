@@ -299,7 +299,7 @@ export const updateShippingAddresctrl = asyncHandler(async (req, res) => {
     country,
   } = req.body;
   const user = await User.findByIdAndUpdate(
-    req.userAuthId,
+    req.user._id,
     {
       shippingAddress: {
         firstName,
@@ -324,3 +324,5 @@ export const updateShippingAddresctrl = asyncHandler(async (req, res) => {
     user,
   });
 });
+
+
